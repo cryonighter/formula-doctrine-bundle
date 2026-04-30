@@ -19,8 +19,11 @@
         "symfony/http-kernel": ">=6.4"
     },
     "require-dev": {
+        "doctrine/doctrine-bundle": "^2.11",
+        "phpunit/phpunit": "^11.5",
         "symfony/framework-bundle": ">=6.4",
-        "doctrine/doctrine-bundle": "^2.11"
+        "symfony/phpunit-bridge": "^8.0",
+        "symfony/yaml": "^7.4"
     },
     "autoload": {
         "psr-4": {
