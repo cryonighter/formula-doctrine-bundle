@@ -1,0 +1,46 @@
+{
+    "name": "cryonighter/formula-doctrine-bundle",
+    "type": "symfony-bundle",
+    "description": "Symfony bundle integrating Hibernate-style #[Formula] computed fields into Doctrine ORM entities",
+    "homepage": "https://github.com/cryonighter/formula-doctrine-bundle",
+    "license": "MIT",
+    "keywords": ["doctrine", "orm", "formula", "computed", "symfony", "hibernate"],
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "Andrey Reshetchenko",
+            "email": "cryonighter@yandex.ru"
+        }
+    ],
+    "require": {
+        "php": ">=8.2",
+        "cryonighter/formula-doctrine": "^1.0",
+        "symfony/dependency-injection": ">=6.4",
+        "symfony/http-kernel": ">=6.4"
+    },
+    "require-dev": {
+        "symfony/framework-bundle": ">=6.4",
+        "doctrine/doctrine-bundle": "^2.11"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cryonighter\\FormulaDoctrineBundle\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Cryonighter\\FormulaDoctrineBundle\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "platform": {
+            "php": "8.2"
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "symfony": {
+            "allow-contrib": false
+        }
+    }
+}
