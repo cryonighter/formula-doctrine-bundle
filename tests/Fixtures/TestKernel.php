@@ -8,11 +8,30 @@ use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
 use Symfony\Bundle\FrameworkBundle\Kernel\MicroKernelTrait;
 use Symfony\Component\Config\Loader\LoaderInterface;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Filesystem\Filesystem;
 use Symfony\Component\HttpKernel\Kernel;
 
 final class TestKernel extends Kernel
 {
     use MicroKernelTrait;
+
+    private string $cacheDir;
+
+    public function __construct(string $environment, bool $debug)
+    {
+        parent::__construct($environment, $debug);
+
+        $token = $_SERVER['TEST_TOKEN'] ?? $_ENV['TEST_TOKEN'] ?? (string) getmypid();
+
+        $this->cacheDir = sys_get_temp_dir() . "/formula_doctrine_bundle/cache/$token/$this->environment";
+    }
+
+    public function shutdown(): void
+    {
+        parent::shutdown();
+
+        (new Filesystem())->remove($this->cacheDir);
+    }
 
     public function registerBundles(): iterable
     {
@@ -30,12 +49,12 @@ final class TestKernel extends Kernel
 
     public function getCacheDir(): string
     {
-        return sys_get_temp_dir() . '/formula_doctrine_bundle/cache/' . $this->environment;
+        return $this->cacheDir;
     }
 
     public function getLogDir(): string
     {
-        return sys_get_temp_dir() . '/formula_doctrine_bundle/log/' . $this->environment;
+        return sys_get_temp_dir() . '/formula_doctrine_bundle/log/' . basename($this->cacheDir);
     }
 
     protected function configureContainer(ContainerBuilder $container, LoaderInterface $loader): void
