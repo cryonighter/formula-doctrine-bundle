@@ -11,15 +11,28 @@ It enables Hibernate-style `#[Formula]` computed fields for Doctrine ORM entitie
 and wires the required Doctrine metadata listeners, SQL walker configuration and
 DBAL middleware automatically through Symfony's dependency injection container.
 
-Use it when you want read-only entity properties whose values are computed by SQL
+Use it when you want read-only entity properties whose values are computed by DQL/SQL
 expressions, subqueries, aggregations or joins — without adding physical database
 columns and without introducing N+1 queries.
+
+Example with native SQL subquery – **must be** enclosed in parentheses:
 
 ```php
 #[ORM\Entity]
 class Customer
 {
     #[Formula('(SELECT COUNT(*) FROM orders o WHERE o.customer_id = {this}.id)')]
+    public int $orderCount = 0;
+}
+```
+
+Example using DQL subquery – **should not** be enclosed in parentheses:
+
+```php
+#[ORM\Entity]
+class Customer
+{
+    #[Formula('SELECT COUNT(o) FROM App\Entity\Order o WHERE o.customer = {this}')]
     public int $orderCount = 0;
 }
 ```
@@ -94,12 +107,15 @@ class Customer
     #[ORM\Column]
     public string $name;
 
-    #[Formula('(SELECT COUNT(*) FROM orders o WHERE o.customer_id = {this}.id)')]
+    // DQL — must NOT be enclosed in parentheses
+    #[Formula('SELECT COUNT(o) FROM App\Entity\Order o WHERE o.customer = {this}')]
     public int $orderCount = 0;
 
+    // Native SQL — must be enclosed in parentheses
     #[Formula('(SELECT COALESCE(SUM(oi.price), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.customer_id = {this}.id)')]
     public float $totalRevenue = 0.0;
 
+    // Nullable formula
     #[Formula('(SELECT MAX(o.created_at) FROM orders o WHERE o.customer_id = {this}.id)')]
     public ?string $lastOrderDate = null;
 }
@@ -125,12 +141,12 @@ foreach ($customers as $customer) {
 
 A single SQL query is executed — no N+1:
 
-```sql
-SELECT c0_.id,
-       c0_.name,
-       (SELECT COUNT(*) FROM orders o WHERE o.customer_id = c0_.id) AS orderCount,
-       (SELECT COALESCE(SUM(...), 0) FROM ...) AS totalRevenue,
-       (SELECT MAX(...) FROM ...) AS lastOrderDate
+```postgresql
+SELECT c0_.id AS id_0,
+       c0_.name AS name_1,
+       (SELECT COUNT(o0_.id) AS sclr_1 FROM orders o0_ WHERE o0_.customer_id = c0_.id) AS orderCount_2,
+       (SELECT COALESCE(SUM(oi.price), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.customer_id = c0_.id) AS totalRevenue_3,
+       (SELECT MAX(o.created_at) FROM orders o WHERE o.customer_id = c0_.id) AS lastOrderDate_4
 FROM customers c0_
 ```
 
@@ -300,16 +316,26 @@ public ?float $maxOrderTotal = null;
 
 ### The `{this}` placeholder
 
-Use `{this}` to reference the root entity's table alias in the SQL expression.
-It is resolved to the actual Doctrine-generated alias (e.g. `c0_`) at query time.
+Use `{this}` to reference the root entity's table alias in the native SQL expression or root entity itself in the DQL expression.
+
+In **native SQL**, `{this}` is resolved to the actual Doctrine-generated table alias (e.g. `c0_`):
 
 ```php
-// {this} will become the real SQL alias, e.g. c0_
+// {this} → c0_ (SQL table alias)
 #[Formula('(SELECT COUNT(*) FROM orders o WHERE o.customer_id = {this}.id)')]
 public int $orderCount = 0;
 ```
 
-> **Do not** hardcode the table name directly — it will break when Doctrine
+In **DQL**, `{this}` refers to the root entity itself, so you compare against the entity
+reference directly — without a field suffix:
+
+```php
+// {this} → the root entity alias
+#[Formula('SELECT COUNT(o) FROM App\Entity\Order o WHERE o.customer = {this}')]
+public int $orderCount = 0;
+```
+
+> **Do not** hardcode the table name or alias directly — it will break when Doctrine
 > generates a different alias.
 
 
