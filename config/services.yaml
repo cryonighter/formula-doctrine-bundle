@@ -38,8 +38,3 @@ services:
             - '@cryonighter.formula_doctrine.metadata_registry'
         tags:
             - { name: doctrine.middleware }
-
-    Cryonighter\FormulaDoctrine\Query\FormulaSqlWalker:
-        autowire: false
-        autoconfigure: false
-        public: false

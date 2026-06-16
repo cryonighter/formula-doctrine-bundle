@@ -18,9 +18,9 @@ final class FormulaDoctrineBundle extends AbstractBundle
 
     public function loadExtension(
         array $config,
-        ContainerConfigurator $container,
-        ContainerBuilder $builder,
+        ContainerConfigurator $configurator,
+        ContainerBuilder $container,
     ): void {
-        $container->import('../config/services.yaml');
+        $configurator->import('../config/services.yaml');
     }
 }
