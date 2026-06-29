@@ -427,6 +427,44 @@ public int $orderCount = 0;
 > e.g. for compatibility with a specific reporting tool.
 
 
+### Nested Formulas
+
+A `#[Formula]` expression can reference a formula field of another entity.
+The entire chain is resolved into a **single SQL query**.
+
+```php
+#[ORM\Entity]
+class Customer
+{
+    #[ORM\ManyToOne(targetEntity: Country::class)]
+    public Country $country;
+
+    // DQL formula — exposed under alias 'orders'
+    #[Formula('SELECT COUNT(o) FROM App\Entity\Order o WHERE o.customer = {this}', alias: 'orders')]
+    public int $orderCount = 0;
+
+    // SQL formula — exposed by property name 'totalRevenue'
+    #[Formula('(SELECT COALESCE(SUM(oi.price), 0) FROM order_items oi JOIN orders o ON oi.order_id = o.id WHERE o.customer_id = {this}.id)')]
+    public float $totalRevenue = 0.0;
+}
+
+#[ORM\Entity]
+class Country
+{
+    // SQL formula — references Customer.orderCount by its alias 'orders'
+    #[Formula('(SELECT COALESCE(SUM(c.orders), 0) FROM customers c WHERE c.country_id = {this}.id)')]
+    public int $customerOrderCount = 0;
+
+    // DQL formula — references Customer.totalRevenue by property name
+    #[Formula('SELECT COALESCE(SUM(c.totalRevenue), 0) FROM App\Entity\Customer c WHERE c.country = {this}')]
+    public float $customerRevenue = 0.0;
+}
+```
+> **Note:** In a **native SQL** expression, reference another formula field by
+> its **`alias`** if one is declared (e.g. `c.total`), or by the property name otherwise.
+> In a **DQL** expression, **always** use the property name (e.g. `c.orderCount`).
+
+
 ### UPDATE queries
 
 Formula fields can be used in the `WHERE` clause of DQL `UPDATE` queries —
@@ -463,13 +501,13 @@ You can read about this in the description of the base package [`cryonighter/for
 
 ## Limitations
 
-| Limitation             | Notes                                                                                                                                                                                                         |
-|------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Read-only fields       | Formula fields must not have `#[ORM\Column]`. They are registered internally by the library and must never be written to the database.                                                                        |
-| Scalar types only      | Supported PHP types: `int`, `float`, `string`, `bool` and their nullable variants. Always provide a default value for non-nullable formula properties (e.g. `public int $orderCount = 0`).                    |
-| Native SQL             | `$em->getConnection()->executeQuery(...)` bypasses both Walker and Middleware entirely — formula fields will hold their default PHP values.                                                                   |
-| Schema Tool            | `doctrine:schema:create` and `doctrine:schema:update` do not create columns for formula fields — they have no physical column in the database. This is correct behaviour.                                     |
-| Walker Chaining order  | `FormulaDoctrineBundle` must be registered **last** in `config/bundles.php` among Doctrine-extending bundles to ensure correct Walker Chaining. See [Bundle Registration Order](#bundle-registration-order).  |
+| Limitation             | Notes                                                                                                                                                                                                                                               |
+|------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Read-only fields       | Formula fields must not have `#[ORM\Column]`. They are registered internally by the library and must never be written to the database.                                                                                                              |
+| Scalar types only      | Supported PHP types: `int`, `float`, `string`, `bool`, `\DateTime`, `\DateTimeImmutable`, `\DateTimeInterface` and their nullable variants. Always provide a default value for non-nullable formula properties (e.g. `public int $orderCount = 0`). |
+| Native SQL             | `$em->getConnection()->executeQuery(...)` bypasses both Walker and Middleware entirely — formula fields will hold their default PHP values.                                                                                                         |
+| Schema Tool            | `doctrine:schema:create` and `doctrine:schema:update` do not create columns for formula fields — they have no physical column in the database. This is correct behaviour.                                                                           |
+| Walker Chaining order  | `FormulaDoctrineBundle` must be registered **last** in `config/bundles.php` among Doctrine-extending bundles to ensure correct Walker Chaining. See [Bundle Registration Order](#bundle-registration-order).                                        |
 
 ## Change log
 
